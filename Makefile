@@ -9,3 +9,8 @@ install:
 get_vendor_deps:
 	go get github.com/Masterminds/glide
 	glide install
+
+build_binaries:
+	go get github.com/karalabe/xgo
+	xgo -dest build/ ./cmd/gaia
+	xgo -dest build/ ./cmd/gaiacli
