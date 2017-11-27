@@ -12,5 +12,5 @@ get_vendor_deps:
 
 build_binaries:
 	go get github.com/karalabe/xgo
-	xgo -dest build/ ./cmd/gaia
+	xgo -dest -targets=darwin/*,linux/*,windows/* build/ ./cmd/gaia
 	xgo -dest build/ ./cmd/gaiacli
