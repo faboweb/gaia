@@ -31,20 +31,20 @@ func TestState(t *testing.T) {
 	}
 
 	// check the empty store first
-	resCand := LoadCandidate(store, pk)
+	resCand := loadCandidate(store, pk)
 	assert.Nil(resCand)
 	resPks := loadCandidatesPubKeys(store)
 	assert.Zero(len(resPks))
 
 	// set and retrieve a record
 	saveCandidate(store, candidate)
-	resCand = LoadCandidate(store, pk)
+	resCand = loadCandidate(store, pk)
 	assert.Equal(candidate, resCand)
 
 	// modify a records, save, and retrieve
 	candidate.Shares = 99
 	saveCandidate(store, candidate)
-	resCand = LoadCandidate(store, pk)
+	resCand = loadCandidate(store, pk)
 	assert.Equal(candidate, resCand)
 
 	// also test that the pubkey has been added to pubkey list

@@ -22,10 +22,10 @@ const (
 	FlagAmount = "amount"
 	FlagShares = "shares"
 
-	FlagName    = "name"
-	FlagKeybase = "keybase-sig"
-	FlagWebsite = "website"
-	FlagDetails = "details"
+	FlagMoniker  = "moniker"
+	FlagIdentity = "keybase-sig"
+	FlagWebsite  = "website"
+	FlagDetails  = "details"
 )
 
 // nolint
@@ -65,8 +65,8 @@ func init() {
 	fsShares.Int64(FlagShares, 0, "Amount of shares to unbond")
 
 	fsCandidate := flag.NewFlagSet("", flag.ContinueOnError)
-	fsCandidate.String(FlagName, "", "validator-candidate name")
-	fsCandidate.String(FlagKeybase, "", "optional keybase signature")
+	fsCandidate.String(FlagMoniker, "", "validator-candidate name")
+	fsCandidate.String(FlagIdentity, "", "optional keybase signature")
 	fsCandidate.String(FlagWebsite, "", "optional website")
 	fsCandidate.String(FlagDetails, "", "optional detailed description space")
 
@@ -96,15 +96,15 @@ func cmdDeclareCandidacy(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if viper.GetString(FlagName) == "" {
-		return fmt.Errorf("please enter a name for the validator-candidate using --name")
+	if viper.GetString(FlagMoniker) == "" {
+		return fmt.Errorf("please enter a moniker for the validator-candidate using --moniker")
 	}
 
 	description := stake.Description{
-		Name:    viper.GetString(FlagName),
-		Keybase: viper.GetString(FlagKeybase),
-		Website: viper.GetString(FlagWebsite),
-		Details: viper.GetString(FlagDetails),
+		Moniker:  viper.GetString(FlagMoniker),
+		Identity: viper.GetString(FlagIdentity),
+		Website:  viper.GetString(FlagWebsite),
+		Details:  viper.GetString(FlagDetails),
 	}
 
 	tx := stake.NewTxDeclareCandidacy(amount, pk, description)
@@ -119,10 +119,10 @@ func cmdEditCandidacy(cmd *cobra.Command, args []string) error {
 	}
 
 	description := stake.Description{
-		Name:    viper.GetString(FlagName),
-		Keybase: viper.GetString(FlagKeybase),
-		Website: viper.GetString(FlagWebsite),
-		Details: viper.GetString(FlagDetails),
+		Moniker:  viper.GetString(FlagMoniker),
+		Identity: viper.GetString(FlagIdentity),
+		Website:  viper.GetString(FlagWebsite),
+		Details:  viper.GetString(FlagDetails),
 	}
 
 	tx := stake.NewTxEditCandidacy(pk, description)
@@ -146,7 +146,7 @@ func cmdDelegate(cmd *cobra.Command, args []string) error {
 
 func cmdUnbond(cmd *cobra.Command, args []string) error {
 
-	sharesRaw := viper.GetInt64(FlagAmount)
+	sharesRaw := viper.GetInt64(FlagShares)
 	if sharesRaw <= 0 {
 		return fmt.Errorf("shares must be positive interger")
 	}

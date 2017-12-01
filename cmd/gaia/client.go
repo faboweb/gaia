@@ -46,6 +46,8 @@ func prepareClientCommands() {
 		//stakecmd.CmdQueryValidator,
 		stakecmd.CmdQueryCandidates,
 		stakecmd.CmdQueryCandidate,
+		stakecmd.CmdQueryDelegatorBond,
+		stakecmd.CmdQueryDelegatorCandidates,
 	)
 
 	// set up the middleware
@@ -71,9 +73,9 @@ func prepareClientCommands() {
 		ibccmd.PostPacketTxCmd,
 
 		stakecmd.CmdDeclareCandidacy,
+		stakecmd.CmdEditCandidacy,
 		stakecmd.CmdDelegate,
 		stakecmd.CmdUnbond,
-		stakecmd.CmdDeclareCandidacy,
 	)
 
 	clientCmd.AddCommand(

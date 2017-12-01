@@ -1,17 +1,15 @@
 package commands
 
 import (
-	"encoding/hex"
-
 	"github.com/spf13/cobra"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
 	crypto "github.com/tendermint/go-crypto"
 
-	sdk "github.com/cosmos/cosmos-sdk"
 	"github.com/cosmos/cosmos-sdk/client/commands"
 	"github.com/cosmos/cosmos-sdk/client/commands/query"
+	"github.com/cosmos/cosmos-sdk/modules/coin"
 	"github.com/cosmos/cosmos-sdk/stack"
 	"github.com/cosmos/gaia/modules/stake"
 )
@@ -36,10 +34,10 @@ var (
 		RunE:  cmdQueryDelegatorBond,
 	}
 
-	CmdQueryDelegatorBonds = &cobra.Command{
-		Use:   "delegator-bonds",
-		Short: "Query all delegators bonds based on address",
-		RunE:  cmdQueryDelegatorBond,
+	CmdQueryDelegatorCandidates = &cobra.Command{
+		Use:   "delegator-candidates",
+		RunE:  cmdQueryDelegatorCandidates,
+		Short: "Query all delegators candidates' pubkeys based on address",
 	}
 
 	FlagDelegatorAddress = "delegator-address"
@@ -55,7 +53,7 @@ func init() {
 	CmdQueryCandidate.Flags().AddFlagSet(fsPk)
 	CmdQueryDelegatorBond.Flags().AddFlagSet(fsPk)
 	CmdQueryDelegatorBond.Flags().AddFlagSet(fsAddr)
-	CmdQueryDelegatorBonds.Flags().AddFlagSet(fsAddr)
+	CmdQueryDelegatorCandidates.Flags().AddFlagSet(fsAddr)
 }
 
 func cmdQueryCandidates(cmd *cobra.Command, args []string) error {
@@ -100,11 +98,12 @@ func cmdQueryDelegatorBond(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	delegatorAddr, err := hex.DecodeString(viper.GetString(FlagDelegatorAddress))
+	delegatorAddr := viper.GetString(FlagDelegatorAddress)
+	delegator, err := commands.ParseActor(delegatorAddr)
 	if err != nil {
 		return err
 	}
-	delegator := sdk.NewActor(stake.Name(), delegatorAddr)
+	delegator = coin.ChainAddr(delegator)
 
 	prove := !viper.GetBool(commands.FlagTrustNode)
 	key := stack.PrefixedKey(stake.Name(), stake.GetDelegatorBondKey(delegator, pk))
@@ -116,22 +115,22 @@ func cmdQueryDelegatorBond(cmd *cobra.Command, args []string) error {
 	return query.OutputProof(bond, height)
 }
 
-func cmdQueryDelegatorBonds(cmd *cobra.Command, args []string) error {
+func cmdQueryDelegatorCandidates(cmd *cobra.Command, args []string) error {
 
-	var bonds []*stake.DelegatorBond
-
-	delegatorAddr, err := hex.DecodeString(viper.GetString(FlagDelegatorAddress))
+	delegatorAddr := viper.GetString(FlagDelegatorAddress)
+	delegator, err := commands.ParseActor(delegatorAddr)
 	if err != nil {
 		return err
 	}
-	delegator := sdk.NewActor(stake.Name(), delegatorAddr)
+	delegator = coin.ChainAddr(delegator)
 
 	prove := !viper.GetBool(commands.FlagTrustNode)
 	key := stack.PrefixedKey(stake.Name(), stake.GetDelegatorBondsKey(delegator))
-	height, err := query.GetParsed(key, &bonds, query.GetHeight(), prove)
+	var candidates []crypto.PubKey
+	height, err := query.GetParsed(key, &candidates, query.GetHeight(), prove)
 	if err != nil {
 		return err
 	}
 
-	return query.OutputProof(bonds, height)
+	return query.OutputProof(candidates, height)
 }

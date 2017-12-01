@@ -126,7 +126,7 @@ func (h Handler) CheckTx(ctx sdk.Context, store state.SimpleDB,
 func checkTxDeclareCandidacy(tx TxDeclareCandidacy, sender sdk.Actor, store state.SimpleDB) error {
 
 	// check to see if the pubkey or sender has been registered before
-	candidate := LoadCandidate(store, tx.PubKey)
+	candidate := loadCandidate(store, tx.PubKey)
 	if candidate != nil {
 		return fmt.Errorf("cannot bond to pubkey which is already declared candidacy"+
 			" PubKey %v already registered with %v candidate address",
@@ -139,7 +139,7 @@ func checkTxDeclareCandidacy(tx TxDeclareCandidacy, sender sdk.Actor, store stat
 func checkTxEditCandidacy(tx TxEditCandidacy, sender sdk.Actor, store state.SimpleDB) error {
 
 	// candidate must already be registered
-	candidate := LoadCandidate(store, tx.PubKey)
+	candidate := loadCandidate(store, tx.PubKey)
 	if candidate == nil { // does PubKey exist
 		return fmt.Errorf("cannot delegate to non-existant PubKey %v", tx.PubKey)
 	}
@@ -148,7 +148,7 @@ func checkTxEditCandidacy(tx TxEditCandidacy, sender sdk.Actor, store state.Simp
 
 func checkTxDelegate(tx TxDelegate, sender sdk.Actor, store state.SimpleDB) error {
 
-	candidate := LoadCandidate(store, tx.PubKey)
+	candidate := loadCandidate(store, tx.PubKey)
 	if candidate == nil { // does PubKey exist
 		return fmt.Errorf("cannot delegate to non-existant PubKey %v", tx.PubKey)
 	}
@@ -159,7 +159,7 @@ func checkTxUnbond(tx TxUnbond, sender sdk.Actor, store state.SimpleDB) error {
 
 	//check if have enough shares to unbond
 	bond := loadDelegatorBond(store, sender, tx.PubKey)
-	if bond.Shares < uint64(tx.Shares) {
+	if bond.Shares < tx.Shares {
 		return fmt.Errorf("not enough bond shares to unbond, have %v, trying to unbond %v",
 			bond.Shares, tx.Shares)
 	}
@@ -231,7 +231,7 @@ func runTxDeclareCandidacy(store state.SimpleDB, sender sdk.Actor,
 	transferFn transferFn, tx TxDeclareCandidacy) (res abci.Result) {
 
 	// create and save the empty candidate
-	bond := LoadCandidate(store, tx.PubKey)
+	bond := loadCandidate(store, tx.PubKey)
 	if bond != nil {
 		return resCandidateExistsAddr
 	}
@@ -241,8 +241,8 @@ func runTxDeclareCandidacy(store state.SimpleDB, sender sdk.Actor,
 
 	// move coins from the sender account to a (self-bond) delegator account
 	// the candidate account will be updated automatically here
-	txDeligate := TxDelegate{tx.BondUpdate}
-	res = runTxDelegate(store, sender, transferFn, txDeligate)
+	txDelegate := TxDelegate{tx.BondUpdate}
+	res = runTxDelegate(store, sender, transferFn, txDelegate)
 	if res.IsErr() {
 		return res
 	}
@@ -254,20 +254,20 @@ func runTxEditCandidacy(store state.SimpleDB, sender sdk.Actor,
 	transferFn transferFn, tx TxEditCandidacy) (res abci.Result) {
 
 	// Get the pubKey bond account
-	candidate := LoadCandidate(store, tx.PubKey)
+	candidate := loadCandidate(store, tx.PubKey)
 	if candidate == nil {
 		return resBondNotNominated
 	}
-	if candidate.Owner.Empty() { //candidate has been rejected
+	if candidate.Owner.Empty() { //candidate has been withdrawn
 		return resBondNotNominated
 	}
 
 	//check and edit any of the editable terms
-	if tx.Description.Name != "" {
-		candidate.Description.Name = tx.Description.Name
+	if tx.Description.Moniker != "" {
+		candidate.Description.Moniker = tx.Description.Moniker
 	}
-	if tx.Description.Keybase != "" {
-		candidate.Description.Keybase = tx.Description.Keybase
+	if tx.Description.Identity != "" {
+		candidate.Description.Identity = tx.Description.Identity
 	}
 	if tx.Description.Website != "" {
 		candidate.Description.Website = tx.Description.Website
@@ -285,11 +285,11 @@ func runTxDelegate(store state.SimpleDB, sender sdk.Actor,
 	transferFn transferFn, tx TxDelegate) (res abci.Result) {
 
 	// Get the pubKey bond account
-	candidate := LoadCandidate(store, tx.PubKey)
+	candidate := loadCandidate(store, tx.PubKey)
 	if candidate == nil {
 		return resBondNotNominated
 	}
-	if candidate.Owner.Empty() { //candidate has been rejected
+	if candidate.Owner.Empty() { //candidate has been withdrawn
 		return resBondNotNominated
 	}
 
@@ -299,6 +299,11 @@ func runTxDelegate(store state.SimpleDB, sender sdk.Actor,
 	if res.IsErr() {
 		return res
 	}
+
+	//key := stack.PrefixedKey(coin.NameCoin, sender.Address)
+	//acc := coin.Account{}
+	//query.GetParsed(key, &acc, query.GetHeight(), false)
+	//panic(fmt.Sprintf("debug acc: %v\n", acc))
 
 	// Get or create the delegator bond
 	bond := loadDelegatorBond(store, sender, tx.PubKey)
@@ -330,7 +335,7 @@ func runTxUnbond(store state.SimpleDB, sender sdk.Actor,
 	}
 
 	//get pubKey candidate
-	candidate := LoadCandidate(store, tx.PubKey)
+	candidate := loadCandidate(store, tx.PubKey)
 	if candidate == nil {
 		return resNoCandidateForAddress
 	}
