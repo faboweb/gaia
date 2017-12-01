@@ -51,7 +51,7 @@ func defaultParams() Params {
 // total bonds multiplied by exchange rate.
 // NOTE if the Owner.Empty() == true then this is a revoked candidate
 type Candidate struct {
-	PubKey      crypto.PubKey `json:"pubkey"`       // Pubkey of candidate
+	PubKey      crypto.PubKey `json:"pub_key"`      // Pubkey of candidate
 	Owner       sdk.Actor     `json:"owner"`        // Sender of BondTx - UnbondTx returns here
 	Shares      uint64        `json:"shares"`       // Total number of delegated shares to this candidate, equivalent to coins held in bond account
 	VotingPower uint64        `json:"voting_power"` // Voting power if pubKey is a considered a validator
@@ -60,10 +60,10 @@ type Candidate struct {
 
 // Description - description fields for a candidate
 type Description struct {
-	Name    string `json:"pubkey"`
-	Keybase string `json:"keybase"` // keybase signature
-	Website string `json:"website"`
-	Details string `json:"details"`
+	Moniker  string `json:"moniker"`
+	Identity string `json:"identity"`
+	Website  string `json:"website"`
+	Details  string `json:"details"`
 }
 
 // NewCandidate - initialize a new candidate
@@ -93,15 +93,6 @@ type Candidates []*Candidate
 
 var _ sort.Interface = Candidates{} //enforce the sort interface at compile time
 
-// LoadCandidates - TODO replace with  multistore
-func LoadCandidates(store state.SimpleDB) (candidates Candidates) {
-	pks := loadCandidatesPubKeys(store)
-	for _, pk := range pks {
-		candidates = append(candidates, LoadCandidate(store, pk))
-	}
-	return
-}
-
 // nolint - sort interface functions
 func (cs Candidates) Len() int      { return len(cs) }
 func (cs Candidates) Swap(i, j int) { cs[i], cs[j] = cs[j], cs[i] }
@@ -109,16 +100,11 @@ func (cs Candidates) Less(i, j int) bool {
 	vp1, vp2 := cs[i].VotingPower, cs[j].VotingPower
 	d1, d2 := cs[i].Owner, cs[j].Owner
 
-	switch {
-	case vp1 != vp2:
+	//note that all ChainId and App must be the same for a group of candidates
+	if vp1 != vp2 {
 		return vp1 > vp2
-	case d1.ChainID != d2.ChainID:
-		return d1.ChainID < d2.ChainID
-	case d1.App != d2.App:
-		return d1.App < d2.App
-	default:
-		return bytes.Compare(d1.Address, d2.Address) == -1
 	}
+	return bytes.Compare(d1.Address, d2.Address) == -1
 }
 
 // Sort - Sort the array of bonded values
@@ -157,6 +143,14 @@ func (cs Candidates) UpdateVotingPower(store state.SimpleDB) (changed bool) {
 // the UpdateVotingPower function which is the only function which
 // is to modify the VotingPower
 func (cs Candidates) GetValidators(store state.SimpleDB) []Candidate {
+
+	//test if empty
+	if len(cs) == 1 {
+		if cs[0].VotingPower == 0 {
+			return nil
+		}
+	}
+
 	maxVals := loadParams(store).MaxVals
 	validators := make([]Candidate, cmn.MinInt(len(cs), maxVals))
 	for i, c := range cs {
@@ -168,6 +162,7 @@ func (cs Candidates) GetValidators(store state.SimpleDB) []Candidate {
 		}
 		validators[i] = *c
 	}
+
 	return validators
 }
 
@@ -184,7 +179,7 @@ func ValidatorsDiff(previous, current []Candidate, store state.SimpleDB) (diff [
 	for _, prevVal := range previous {
 		abciVal := prevVal.ABCIValidator()
 		found := false
-		candidate := LoadCandidate(store, prevVal.PubKey)
+		candidate := loadCandidate(store, prevVal.PubKey)
 		if candidate != nil {
 			found = true
 			if candidate.VotingPower != prevVal.VotingPower {
@@ -206,6 +201,9 @@ func ValidatorsDiff(previous, current []Candidate, store state.SimpleDB) (diff [
 		//loop through diff to see if there where any missed
 		found := false
 		for _, prevVal := range previous {
+			if prevVal.PubKey.Empty() {
+				continue
+			}
 			if prevVal.PubKey.Equals(curVal.PubKey) {
 				found = true
 				break

@@ -29,7 +29,6 @@ var nodeCmd = &cobra.Command{
 
 func prepareNodeCommands() {
 
-	// require all fees in strings - change this in your app!
 	basecmd.Handler = stack.New(
 		base.Logger{},
 		stack.Recovery{},
@@ -41,7 +40,7 @@ func prepareNodeCommands() {
 		IBC(ibc.NewMiddleware()).
 		Apps(
 			roles.NewMiddleware(),
-			fee.NewSimpleFeeMiddleware(coin.Coin{"strings", 0}, fee.Bank),
+			fee.NewSimpleFeeMiddleware(coin.Coin{"fermion", 0}, fee.Bank),
 			stack.Checkpoint{OnDeliver: true},
 		).
 		Dispatch(
@@ -56,23 +55,14 @@ func prepareNodeCommands() {
 		basecmd.GetTickStartCmd(sdk.TickerFunc(tickFn)),
 		basecmd.UnsafeResetAllCmd,
 	)
-	//basecmd.SetUpRoot(nodeCmd)
 }
 
-// Tick - Called every block even if no transaction,
-// process all queues, validator rewards, and calculate the validator set difference
+// Tick - Called every block even if no transaction, process all queues,
+// validator rewards, and calculate the validator set difference
 func tickFn(ctx sdk.Context, store state.SimpleDB) (diffVal []*abci.Validator, err error) {
-	// First need to prefix the store, at this point it's a global store
+	// first need to prefix the store, at this point it's a global store
 	store = stack.PrefixedStore(stake.Name(), store)
 
-	// Determine the validator set changes
-	candidates := stake.LoadCandidates(store)
-	startVal := candidates.GetValidators(store)
-	changed := candidates.UpdateVotingPower(store)
-	if !changed {
-		return
-	}
-	newVal := candidates.GetValidators(store)
-	diffVal = stake.ValidatorsDiff(startVal, newVal, store)
-	return
+	// execute Tick
+	return stake.Tick(store)
 }

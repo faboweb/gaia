@@ -37,7 +37,7 @@ var _, _, _, _ sdk.TxInner = &TxDeclareCandidacy{}, &TxEditCandidacy{}, &TxDeleg
 
 // BondUpdate - struct for bonding or unbonding transactions
 type BondUpdate struct {
-	PubKey crypto.PubKey `json:"pubKey"`
+	PubKey crypto.PubKey `json:"pub_key"`
 	Bond   coin.Coin     `json:"amount"`
 }
 
@@ -79,7 +79,7 @@ func (tx TxDeclareCandidacy) Wrap() sdk.Tx { return sdk.Tx{tx} }
 
 // TxEditCandidacy - struct for editing a candidate
 type TxEditCandidacy struct {
-	PubKey crypto.PubKey `json:"pubKey"`
+	PubKey crypto.PubKey `json:"pub_key"`
 	Description
 }
 
@@ -123,7 +123,7 @@ func (tx TxDelegate) Wrap() sdk.Tx { return sdk.Tx{tx} }
 
 // TxUnbond - struct for unbonding transactions
 type TxUnbond struct {
-	PubKey crypto.PubKey `json:"pubKey"`
+	PubKey crypto.PubKey `json:"pub_key"`
 	Shares uint64        `json:"amount"`
 }
 
